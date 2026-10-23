@@ -1,3 +1,4 @@
+import { streamSSE } from "hono/streaming";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -33,9 +34,18 @@ chat.post("/", async (c) => {
   );
   const messages = [new SystemMessage(INTERVIEWER_PROMPT), ...history];
   // 等待答案生成后一次性返回 （后续改为流式）
-  const replay = await model.invoke(messages);
+  //   const replay = await model.invoke(messages);
 
-  return c.json({ role: "assistant", content: replay.content });
+  //   return c.json({ role: "assistant", content: replay.content });
+  return streamSSE(c, async (stream) => {
+    const tokenStream = await model.stream(messages);
+    for await (const chunk of tokenStream) {
+      const text = typeof chunk.content === "string" ? chunk.content : "";
+      await stream.writeSSE({
+        data: JSON.stringify({ content: text }),
+      });
+    }
+  });
 });
 
 export default chat;

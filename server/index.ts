@@ -1,3 +1,4 @@
+// 踩坑点 带有副作用的环境引入放在顶部 否则执行chat初始化时找不到环境
 import "dotenv/config";
 import chat from "./routes/chat";
 import { serve } from "@hono/node-server";

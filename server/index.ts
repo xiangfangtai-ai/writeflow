@@ -1,4 +1,5 @@
 import "dotenv/config";
+import chat from "./routes/chat";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -9,6 +10,8 @@ app.use("/api/*", cors());
 app.get("/api/health", (c) => {
   return c.json({ status: "ok", time: new Date().toISOString() });
 });
+
+app.route("/api/chat", chat);
 
 const port = Number(process.env.PORT) ?? 3001;
 

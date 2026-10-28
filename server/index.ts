@@ -4,6 +4,7 @@ import chat from "./routes/chat";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { getKnowledgeBase } from "./rag/knowledgeBase";
 const app = new Hono();
 // 允许api请求跨域访问
 app.use("/api/*", cors());
@@ -15,6 +16,9 @@ app.get("/api/health", (c) => {
 app.route("/api/chat", chat);
 
 const port = Number(process.env.PORT) ?? 3001;
+
+console.log("正在初始化知识库...");
+await getKnowledgeBase();
 
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`API 服务正运行在 http://localhost:${info.port}`);

@@ -7,6 +7,8 @@ import {
   SystemMessage,
 } from "@langchain/core/messages";
 import { INTERVIEWER_PROMPT, model } from "../ai/model";
+import { retrieveContext } from "../rag/knowledgeBase";
+
 const chat = new Hono();
 
 const bodySchema = z.object({
@@ -19,6 +21,7 @@ const bodySchema = z.object({
     )
     .min(1),
 });
+
 chat.post("/", async (c) => {
   const body = await c.req.json();
   const parsed = bodySchema.safeParse(body);
@@ -28,15 +31,23 @@ chat.post("/", async (c) => {
       400,
     );
   }
-  // 转成Langchain消息 最前面插入系统提示词
+
   const history = parsed.data.messages.map((m) =>
     m.role === "user" ? new HumanMessage(m.content) : new AIMessage(m.content),
   );
-  const messages = [new SystemMessage(INTERVIEWER_PROMPT), ...history];
-  // 等待答案生成后一次性返回 （后续改为流式）
-  //   const replay = await model.invoke(messages);
 
-  //   return c.json({ role: "assistant", content: replay.content });
+  // RAG：取最后一条用户消息（多轮时最新问题才是检索目标），检索知识库
+  const lastUser = [...parsed.data.messages]
+    .reverse()
+    .find((m) => m.role === "user");
+  let systemPrompt = INTERVIEWER_PROMPT;
+  if (lastUser) {
+    const { context } = await retrieveContext(lastUser.content, 3);
+    systemPrompt = `${INTERVIEWER_PROMPT}\n\n【知识库参考资料】（优先参考，资料没有的不要编造）：\n\n${context}`;
+  }
+
+  const messages = [new SystemMessage(systemPrompt), ...history];
+
   return streamSSE(c, async (stream) => {
     const tokenStream = await model.stream(messages);
     for await (const chunk of tokenStream) {

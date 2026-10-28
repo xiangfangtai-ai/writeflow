@@ -42,8 +42,12 @@ chat.post("/", async (c) => {
     .find((m) => m.role === "user");
   let systemPrompt = INTERVIEWER_PROMPT;
   if (lastUser) {
-    const { context } = await retrieveContext(lastUser.content, 3);
-    systemPrompt = `${INTERVIEWER_PROMPT}\n\n【知识库参考资料】（优先参考，资料没有的不要编造）：\n\n${context}`;
+    const { context, results } = await retrieveContext(lastUser.content, 3);
+
+    systemPrompt =
+      results.length > 0
+        ? `${INTERVIEWER_PROMPT}\n\n【知识库参考资料】（优先参考，资料没有的细节不要编造）：\n\n${context}`
+        : `${INTERVIEWER_PROMPT}\n\n说明：知识库中没有与该问题相关的资料，请用你自己的知识回答即可。`;
   }
 
   const messages = [new SystemMessage(systemPrompt), ...history];

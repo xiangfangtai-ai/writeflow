@@ -21,13 +21,13 @@ export class InMemoryVectorStore {
   }
 
   // 检索：问题转向量，和每条算相似度，排序取 top-k
-  async search(query: string, k = 3) {
+  async search(query: string, k = 3, minScore = 0.35) {
     const queryVec = await embed(query);
     const scored = this.records.map((record) => ({
       chunk: record.chunk,
       score: cosineSimilarity(queryVec, record.embedding),
     }));
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, k);
+    return scored.filter((r) => r.score >= minScore).slice(0, k);
   }
 }
